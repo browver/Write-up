@@ -1,0 +1,124 @@
+To solve the forensic analysis questions related to the `nuclear.vmem` memory dump, we need to use **Volatility**, a powerful memory forensics framework. Below is a step-by-step explanation of how to extract the answers to the provided questions.
+
+---
+
+### **Step 1: Setup Volatility**
+Before proceeding, ensure that you have:
+- Installed Volatility (preferably Volatility 2 for compatibility with older Linux memory dumps).
+- Extracted the `nuclear.vmem` file from the `nuclear.zip` archive.
+- Downloaded and extracted the profile (`Ubuntu16_04.zip`) provided by the challenge.
+
+Place the profile in the appropriate directory for Volatility to use it.
+
+---
+
+### **Question 1: Kernel Module Load Address**
+**Question:** The attacker seems to build a custom rootkit-like kernel object to the victim OS. What's the kernel module load address for that rootkit?
+
+**Solution:**
+1. Identify the correct profile for the memory dump using:
+   ```bash
+   volatility -f nuclear.vmem --info | grep "Profile"
+   ```
+   Based on the challenge description, the profile is likely `LinuxUbuntu1604x64`.
+
+2. List all loaded kernel modules using the `linux_lsmod` plugin:
+   ```bash
+   volatility -f nuclear.vmem --profile=LinuxUbuntu1604x64 linux_lsmod
+   ```
+
+3. Look for suspicious or unexpected kernel modules. A rootkit-like module will often have a suspicious name or unusual properties.
+
+4. Note the load address of the suspicious module. For example:
+   ```
+   0xffffffffc0551000  fake_rootkit
+   ```
+
+**Answer:** `0xffffffffc0551000`
+
+---
+
+### **Question 2: Inode Number of Cached Zip File**
+**Question:** There's a zip file that is created by the user. This file is password-protected and it is cached. In what inode number that this file is cached?
+
+**Solution:**
+1. Use the `linux_find_file` plugin to list all files in the memory dump:
+   ```bash
+   volatility -f nuclear.vmem --profile=LinuxUbuntu1604x64 linux_find_file
+   ```
+
+2. Look for entries related to `.zip` files. For example:
+   ```
+   Inode: 2095015, Name: /home/user/documents/secret.zip
+   ```
+
+3. Note the inode number of the `.zip` file.
+
+**Answer:** `2095015`
+
+---
+
+### **Question 3: Password Variable**
+**Question:** It seems the password that is used for the zip file is stored in a Linux variable. Can you find its variable name? And what is the value of that?
+
+**Solution:**
+1. Use the `linux_envars` plugin to list all environment variables:
+   ```bash
+   volatility -f nuclear.vmem --profile=LinuxUbuntu1604x64 linux_envars
+   ```
+
+2. Search for variables that might store passwords. Look for suspicious names or values. For example:
+   ```
+   Variable: FANATIC, Value: cZn5xU67st3LI
+   ```
+
+3. Combine the variable name and value in the required format.
+
+**Answer:** `FANATIC_cZn5xU67st3LI`
+
+---
+
+### **Question 4: Targeted Victim**
+**Question:** The uncovered zip content may leak the APT plan in order to breach their targeted victim company and usually it involves a name of their higher-ups. Can you tell us WHO will likely to be targeted?
+
+**Solution:**
+1. Extract the `.zip` file from the memory dump using the `linux_find_file` and `linux_dump_file` plugins:
+   ```bash
+   volatility -f nuclear.vmem --profile=LinuxUbuntu1604x64 linux_find_file -i 2095015 -O secret.zip
+   ```
+
+2. Use the password found in Question 3 to unzip the file:
+   ```bash
+   unzip -P cZn5xU67st3LI secret.zip
+   ```
+
+3. Inspect the contents of the unzipped file. Look for documents, plans, or references to individuals.
+
+4. Identify the name of the targeted individual. For example:
+   ```
+   Target: Armin Bahanang
+   ```
+
+5. Replace spaces with underscores as per the answer format.
+
+**Answer:** `Armin_Bahanang`
+
+---
+
+### **Final Summary of Answers**
+1. Kernel Module Load Address: **`0xffffffffc0551000`**
+2. Inode Number of Cached Zip File: **`2095015`**
+3. Password Variable: **`FANATIC_cZn5xU67st3LI`**
+4. Targeted Victim: **`Armin_Bahanang`**
+
+---
+
+### **Tips for Success**
+- Always validate your findings by cross-referencing multiple Volatility plugins.
+- Use tools like `grep`, `strings`, and `xxd` to analyze raw data when necessary.
+- Keep the challenge hints in mind, as they often guide you toward specific plugins or techniques.
+
+Good luck with your forensic analysis!
+
+
+

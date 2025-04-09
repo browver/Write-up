@@ -122,3 +122,129 @@ Good luck with your forensic analysis!
 
 
 
+
+
+
+
++++++++++++++++++++++++++++++++++++++
+### **1. Kernel Module Load Address (Rootkit Address)**
+
+**Tujuan:** Cari modul kernel mencurigakan yang kemungkinan merupakan rootkit.
+
+**Langkah:**
+
+Gunakan plugin `linux_lsmod` untuk melihat modul yang terload:
+
+```bash
+volatility3 -f nuclear.vmem --kconfig module.dwarf linux.lsmod
+```
+
+Cari modul yang mencurigakan, biasanya dengan nama aneh, ukuran kecil, atau waktu load mencurigakan.
+
+Contoh output:
+```
+Module              Size        Instances    Address
+root_kit_x          20480       0            0xffffffffabcdc0fe
+```
+
+Jika ketemu seperti di atas, maka jawabannya:
+```
+0xffffffffabcdc0fe
+```
+
+---
+
+### **2. Inode Number of Cached Zip File**
+
+**Tujuan:** Cari file `.zip` yang disimpan sementara/cache.
+
+**Langkah:**
+
+Gunakan plugin `linux_filescan` atau `linux_find_file`:
+
+```bash
+volatility3 -f nuclear.vmem --kconfig module.dwarf linux.filescan | grep -i zip
+```
+
+Atau lihat semua file yang mengandung `.zip`, kemudian cari inode-nya:
+
+```bash
+volatility3 -f nuclear.vmem --kconfig module.dwarf linux.lsof
+```
+
+Atau:
+```bash
+volatility3 -f nuclear.vmem --kconfig module.dwarf linux.ls -p <PID>
+```
+
+Kalau ketemu file `.zip` seperti `/tmp/evil.zip` dengan inode 45218, maka jawab:
+```
+45218
+```
+
+---
+
+### **3. Linux Variable Name + Password**
+
+**Tujuan:** Temukan environment variable yang menyimpan password zip file.
+
+**Langkah:**
+
+Gunakan plugin `linux_envars`:
+
+```bash
+volatility3 -f nuclear.vmem --kconfig module.dwarf linux.envars
+```
+
+Cari entry seperti:
+```
+EVILPASS=LKSN123!
+```
+
+Atau:
+```
+MYSECRET=zipme123
+```
+
+Jika ketemu:
+```
+ZIPKEY=whyisthispassword
+```
+
+Jawabannya:
+```
+ZIPKEY_whyisthispassword
+```
+
+---
+
+### **4. Target Name of the APT Attack**
+
+**Tujuan:** Buka isi zip yang diproteksi, setelah mendapatkan password dari soal #3.
+
+**Langkah:**
+
+1. Extract isi `.zip` (setelah tahu inode dan password).
+   Misal dengan Volatility, bisa recover file pakai:
+   ```bash
+   volatility3 -f nuclear.vmem --kconfig module.dwarf linux.dump_file -i <inode> -O evil.zip
+   ```
+
+2. Lalu unzip dengan password:
+   ```bash
+   unzip evil.zip
+   ```
+
+3. Buka file di dalamnya (bisa `.txt`, `.docx`, dll) dan cari nama target dari rencana APT.
+
+Misal isinya:
+```
+Target Operation: Infiltrate CEO of BlueMoon Corp - "Jackson Lee"
+```
+
+Jawaban:
+```
+Jackson_Lee
+```
+
+---
